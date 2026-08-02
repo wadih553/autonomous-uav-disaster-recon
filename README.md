@@ -81,4 +81,4 @@ Testing progressed through bench validation → simulated missions (QGroundContr
 ## Author
 
 **Wadih Dahrouge** — Mechatronics Engineer, autonomous systems & UAV robotics
-[wadihdahrouge1@gmail.com](mailto:wadihdahrouge1@gmail.com) · LinkedIn: *[add link]
+[wadihdahrouge1@gmail.com](mailto:wadihdahrouge1@gmail.com) 

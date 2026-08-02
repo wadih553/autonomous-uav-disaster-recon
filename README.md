@@ -1,5 +1,3 @@
-Voici le contenu complet, prêt à copier-coller directement dans l'éditeur GitHub :
-
 markdown
 # Autonomous UAV System for Rapid Disaster Reconnaissance
 
@@ -55,24 +53,6 @@ Validated across bench-level hardware checks, QGroundControl / Mission Planner s
   <img src="wiring_schematic.png" width="500" alt="Full wiring schematic">
 </p>
 
-## Repository structure
-
-.
-├── drone/ # Onboard ROS2 packages (Raspberry Pi)
-│ ├── navigator_pkg/ # Mission parsing, waypoint execution, flight-mode control
-│ ├── obstacle_avoidance/ # 360° LiDAR-based real-time avoidance logic
-│ ├── perception/ # YOLOv8 human detection + fire/smoke CNN inference
-│ └── mavros_bridge/ # MAVLink <-> ROS2 bridge configuration
-├── ground_station/ # Flask backend + web frontend
-│ ├── server/ # Mission planning, telemetry, Rosbridge relay
-│ └── ui/ # Live feed, human/fire detection panels, mission control
-├── hardware/ # CAD files, wiring diagrams, bill of materials
-├── docs/ # Full technical report, technical summary, presentation
-└── media/ # Flight test footage, screenshots
-
-
-*(Adjust to match your actual folder layout before publishing — this is the recommended structure if reorganizing.)*
-
 ## Real-world testing
 
 <p align="center">
@@ -91,6 +71,7 @@ Testing progressed through bench validation → simulated missions (QGroundContr
 - **Built under wartime conditions** — active regional conflict disrupted GNSS/network availability and restricted outdoor flight testing, shaping a simulation-first validation strategy.
 - **Limitations identified:** ~18-minute flight endurance (battery/weight constrained), Raspberry Pi 4B compute bottlenecks under multi-node ROS2 load, thermal camera integration and full 3D SLAM mapping were not completed in this iteration.
 - **Future work:** stereo vision, thermal camera integration, secure communication links, multi-UAV swarm coordination.
+- **Source code not included** — the original codebase was lost with the development USB drive after project completion; this repository documents architecture, results, and full technical reporting.
 
 ## Full documentation
 
@@ -100,4 +81,4 @@ Testing progressed through bench validation → simulated missions (QGroundContr
 ## Author
 
 **Wadih Dahrouge** — Mechatronics Engineer, autonomous systems & UAV robotics
-[wadihdahrouge1@gmail.com](mailto:wadihdahrouge1@gmail.com) · LinkedIn: *[add link]*
+[wadihdahrouge1@gmail.com](mailto:wadihdahrouge1@gmail.com) · LinkedIn: *[add link]

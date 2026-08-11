@@ -1,0 +1,47 @@
+# mavros_params.yaml
+# ---------------------
+# MAVROS <-> Pixhawk 2.4.8 link parameters, matching the FYP hardware setup
+# (Ch. 5.1.2 - Communication and Telemetry Infrastructure).
+#
+# The Pixhawk is connected to the Raspberry Pi's UART (Telemetry port),
+# baud rate 57600, running ArduCopter/ArduPilot firmware.
+
+/**:
+  ros__parameters:
+    fcu_url: "/dev/ttyAMA0:57600"
+    gcs_url: "udp://@"
+    target_system_id: 1
+    target_component_id: 1
+    fcu_protocol: "v2.0"
+
+    # Plugin allowlist - only enable what this project actually uses,
+    # to reduce MAVLink bus load on the shared UART link.
+    plugin_allowlist:
+      - 'sys_status'
+      - 'sys_time'
+      - 'command'
+      - 'global_position'
+      - 'local_position'
+      - 'imu'
+      - 'battery'
+      - 'state'
+      - 'mission'
+      - 'waypoint'
+      - 'setpoint_velocity'
+      - 'setpoint_position'
+      - 'param'
+      - 'rc_io'
+
+    # EKF / failsafe related topic rates (Hz)
+    conn:
+      heartbeat_rate: 1.0
+      timeout: 10.0
+
+    global_position:
+      frame_id: "map"
+      child_frame_id: "base_link"
+      use_relative_alt: true
+
+    battery:
+      # Battery failsafe threshold mirrored from ArduPilot BATT_LOW_VOLT (Ch. 4.1.4)
+      low_voltage_threshold: 10.0

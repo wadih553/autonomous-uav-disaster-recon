@@ -1,0 +1,4 @@
+smbus2==0.4.3
+spidev==3.6
+opencv-python==4.10.0.84
+cv-bridge  # installed via ROS2 apt package, not pip, listed here for reference

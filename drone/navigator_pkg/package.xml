@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>navigator_pkg</name>
+  <version>1.0.0</version>
+  <description>Uploads mission waypoints to the Pixhawk via MAVROS and drives autonomous mission execution (Auto/Guided mode switching, RTL, landing).</description>
+  <maintainer email="wadihdahrouge1@gmail.com">Wadih Dahrouge</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>mavros_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

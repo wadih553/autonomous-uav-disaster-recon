@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>UAV Ground Control Station</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <div class="gcs-layout">
+
+    <!-- ============== MAP PANEL ============== -->
+    <div id="map" class="panel map-panel"></div>
+
+    <!-- ============== VIDEO / DETECTION PANEL ============== -->
+    <div class="panel video-panel">
+      <div class="video-container">
+        <img id="video-feed" src="" alt="UAV live feed" />
+        <canvas id="detection-overlay"></canvas>
+      </div>
+      <div class="video-controls">
+        <button data-mode="live" class="mode-btn active">Live Feed</button>
+        <button data-mode="human" class="mode-btn">Human Detection</button>
+        <button data-mode="fire" class="mode-btn">Fire / Smoke</button>
+      </div>
+    </div>
+
+    <!-- ============== TELEMETRY DASHBOARD ============== -->
+    <div class="panel dashboard-panel">
+      <h2>Telemetry</h2>
+      <div class="telemetry-grid">
+        <div class="telemetry-item"><span class="label">Mode</span><span id="tm-mode">--</span></div>
+        <div class="telemetry-item"><span class="label">Armed</span><span id="tm-armed">--</span></div>
+        <div class="telemetry-item"><span class="label">Battery</span><span id="tm-battery">--</span></div>
+        <div class="telemetry-item"><span class="label">Altitude</span><span id="tm-alt">--</span></div>
+        <div class="telemetry-item"><span class="label">GPS Sats / HDOP</span><span id="tm-gps">--</span></div>
+        <div class="telemetry-item"><span class="label">Temperature</span><span id="tm-temp">--</span></div>
+        <div class="telemetry-item"><span class="label">Humidity</span><span id="tm-humidity">--</span></div>
+        <div class="telemetry-item"><span class="label">Air Quality (AQI)</span><span id="tm-aqi">--</span></div>
+      </div>
+
+      <h2>Mission Control</h2>
+      <div class="mission-form">
+        <label>Scan radius (m) <input type="number" id="mp-radius" value="100"></label>
+        <label>Cruise altitude (m) <input type="number" id="mp-cruise" value="30"></label>
+        <label>Scan altitude (m) <input type="number" id="mp-scan-alt" value="15"></label>
+        <p class="hint">Click the map to set the mission center.</p>
+        <button id="btn-generate-mission">Generate Mission</button>
+        <button id="btn-launch-mission" disabled>Launch Mission</button>
+      </div>
+
+      <div class="mission-form">
+        <label>Custom mission (JSON) <input type="file" id="mp-upload" accept="application/json"></label>
+      </div>
+
+      <div class="emergency-controls">
+        <button id="btn-rtl" class="warn">Return to Launch</button>
+        <button id="btn-land" class="danger">Emergency Landing</button>
+      </div>
+
+      <div id="mission-status" class="status-log"></div>
+    </div>
+
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="{{ url_for('static', filename='gcs.js') }}"></script>
+</body>
+</html>

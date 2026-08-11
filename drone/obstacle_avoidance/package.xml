@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>obstacle_avoidance</name>
+  <version>1.0.0</version>
+  <description>360-degree LiDAR based real-time obstacle detection and avoidance for the UAV (YDLiDAR X4 Pro).</description>
+  <maintainer email="wadihdahrouge1@gmail.com">Wadih Dahrouge</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>mavros_msgs</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

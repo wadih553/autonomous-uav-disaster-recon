@@ -4,39 +4,32 @@
 **Technical lead:** Wadih Dahrouge · **Team:** Amine Batrouni, Houssam Hamdan  
 **Supervisor:** Dr. Eng. Roy Abi Zeid Daou
 
-A self-funded UAV prototype for disaster reconnaissance, combining ArduPilot/Pixhawk flight control, ROS 2 components, LiDAR-based obstacle sensing, onboard sensors, computer-vision experiments, and a web-based ground station.
+A self-funded UAV prototype exploring disaster reconnaissance with ArduPilot/Pixhawk flight control, ROS-based components, a 2D LiDAR obstacle-sensing pipeline, environmental sensors, computer-vision experiments, and a web-based ground station.
 
-The project was presented to the **Lebanese Civil Defence**. Its representative described the system as *“very interesting and indispensable”* for wildfire response. The prototype was developed under limited funding and constrained outdoor-testing conditions.
+The project was presented to the **Lebanese Civil Defence**. A representative described the concept as *“very interesting and indispensable”* for wildfire response. The prototype was developed under limited funding and constrained outdoor-testing conditions.
 
-> **Research/engineering portfolio note:** This repository contains selected project code, system diagrams, test imagery, and documentation. It is **not currently a turnkey, fully reproducible deployment**; review the implementation status and limitations below before attempting to run it.
+> **Portfolio scope:** This repository contains selected project artifacts and a research-oriented software implementation. It is **not a turnkey, fully reproducible deployment**. Source code, report descriptions, and historical project summaries do not by themselves establish that every described subsystem was integrated or validated on flight hardware.
 
 ---
 
 ## Project motivation
 
-Wildfires and other emergencies can put responders at risk and make rapid situational awareness difficult. This project explored how a UAV could support reconnaissance by combining waypoint missions, obstacle sensing, video streaming, and fire/smoke and human-detection experiments.
+Wildfires and other emergencies can put responders at risk and make rapid situational awareness difficult. The project explored a UAV workflow combining waypoint missions, obstacle sensing, video streaming, environmental measurements, and human/fire perception.
 
-GNSS reliability and restricted opportunities for outdoor testing were important project constraints. The work used a mix of bench checks, mission simulation, and constrained real-world flight tests. **Full 3D SLAM and fully validated GNSS-denied autonomy were not completed in this iteration.**
+GNSS reliability and restricted opportunities for outdoor testing were important project constraints. The project report describes simulation, bench checks, and constrained real-world flights using GNSS-guided waypoint navigation. **This repository does not demonstrate validated GNSS-denied navigation or a completed full 3D SLAM system.** The YDLIDAR X4 Pro used in the project is a 2D scanning LiDAR.
 
-## Reported prototype results
+## Results and evidence
 
-| Metric | Reported result |
-|---|---:|
-| Human-detection accuracy (YOLOv8) | 92% |
-| Fire-detection accuracy | 80% |
-| Flight endurance | 18 minutes |
-| Assembled mass | 1.4 kg |
-| GPS positioning accuracy during field testing | ±2–3 m |
-| Obstacle-distance measurement error against ground truth | ±2 cm |
-| Environmental-sensor figures | Humidity ±0.5%; temperature ±2–3%; air quality ±4.5 AQI |
+The final-year report gives the following project figures. They should be read with their original context; the repository does not contain a complete benchmark dataset or test protocol to independently reproduce them.
 
-These are **project-reported results**, not independently reproduced benchmarks. The repository does not currently provide a complete evaluation dataset and benchmark protocol for reproducing every figure.
-
-### Detection example
-
-<p align="center">
-  <img src="detection_results.png" width="700" alt="Example fire/smoke and human-detection output">
-</p>
+| Item | Context |
+|---|---|
+| Flight endurance: about 18 minutes | A calculated estimate in the report for a moderate-load scenario, not a claim of independently measured endurance |
+| Assembled mass: about 1.4 kg | Reported component/assembly weight estimate |
+| GPS measurement: approximately ±3 m | Figure stated in the report's sensor-measurement table |
+| Environmental sensor readings | The report includes example comparisons for humidity, temperature, and air-quality readings |
+| Human/fire detection | The report describes machine-learning-based detection, but this repository does not include the trained model weights or a reproducible evaluation suite; no detection-accuracy percentage is claimed here |
+| Obstacle distance | The report describes a ±2 cm target tolerance in its test procedure; that should not be interpreted as an independently verified accuracy result from this repository |
 
 ## System architecture
 
@@ -45,12 +38,12 @@ These are **project-reported results**, not independently reproduced benchmarks.
 </p>
 
 - **Flight controller:** Pixhawk 2.4.8 running ArduCopter/ArduPilot firmware.
-- **Companion computer and robotics middleware:** Raspberry Pi 4B and ROS 2 components.
+- **Companion computer and robotics middleware:** Raspberry Pi 4B and ROS/ROS 2 components, as reflected in the project materials and current code.
 - **Flight-control interface:** MAVLink/MAVROS.
-- **Obstacle sensing:** YDLIDAR X4 Pro, with a front-facing camera for video.
-- **Perception experiments:** YOLOv8-based human detection and a pretrained CNN for fire/smoke detection. The ground-station code contains the detection pipeline; deployment and performance depend on the runtime environment.
+- **Obstacle sensing:** YDLIDAR X4 Pro 2D scanning LiDAR; a camera provides video.
+- **Perception:** The ground-station source contains an optional detection pipeline that expects model weights at runtime. Those weights are not included in this repository, so detection will not be available unless the appropriate models and dependencies are supplied.
 - **Ground station:** Flask, Flask-SocketIO, a web interface using Leaflet, and ROSBridge communication.
-- **Additional sensing:** GPS/compass, landing-distance sensing, MQ-135 air-quality sensor, and SHT3-X temperature/humidity sensor.
+- **Additional sensing described in the report:** GPS/compass, landing-distance sensing, MQ-135 air-quality sensor, and SHT3-X temperature/humidity sensor.
 
 <p align="center">
   <img src="wiring_schematic.png" width="650" alt="UAV wiring schematic">
@@ -62,11 +55,14 @@ These are **project-reported results**, not independently reproduced benchmarks.
   <img src="uav_flight_2m_obstacle_test.jpg" width="600" alt="UAV during an obstacle-avoidance flight test">
 </p>
 
-The reported test sequence included:
+The report describes a test sequence involving:
 - Bench checks and IMU/ESC calibration.
 - Mission simulation using QGroundControl/Mission Planner.
 - Safety-constrained tests, including no-propeller mission validation.
-- Constrained outdoor flights involving takeoff, waypoint navigation, obstacle-avoidance behaviour, and return-to-launch.
+- Constrained outdoor flights involving takeoff, waypoint navigation, and return-to-launch.
+- LiDAR visualization and obstacle-avoidance checks.
+
+The presence of a test description or image is not a substitute for flight logs, an evaluation dataset, or independent replication. Treat the current repository as a portfolio/research artifact, not as flight-ready software.
 
 ## Quick start (ground station)
 
@@ -83,9 +79,9 @@ python -m pip install -r requirements.txt
 cp .env.example .env
 ```
 
-The sample environment file is documentation for configuration; the app does not automatically load `.env`. Export the variables in your shell or use a trusted environment manager. Set a unique `UAV_SECRET_KEY`, configure the Raspberry Pi and ORS key if needed, and review [SECURITY.md](SECURITY.md) before running.
+The sample environment file documents configuration; the app does not automatically load `.env`. Export variables in your shell or use a trusted environment manager. Set a unique `UAV_SECRET_KEY`, configure the Raspberry Pi and ORS key if needed, and review [SECURITY.md](SECURITY.md) before running.
 
-Run the current unit tests from the repository root:
+Run the current checks from the repository root:
 
 ```bash
 python -m pip install -r requirements-dev.txt
@@ -93,14 +89,14 @@ python -m pytest -q
 python -m compileall -q ground_station/server drone
 ```
 
-The GitHub Actions workflow runs Python syntax checks and mission-planner unit tests. It does **not** build the ROS 2 workspace or verify real UAV operation.
+GitHub Actions runs Python syntax checks and mission-planner unit tests. It does **not** build the ROS 2 workspace, test the full Flask/ROSBridge stack, load the vision models, or verify real UAV operation.
 
 ## Repository structure
 
 ```text
 .
 ├── drone/                  # ROS 2 packages and UAV-side components
-│   ├── uav_bringup/          # Installable bringup launch package
+│   └── uav_bringup/        # Bringup launch package
 ├── ground_station/
 │   ├── server/              # Flask API, mission planning, ROSBridge and detection modules
 │   └── ui/                  # Web interface assets and templates
@@ -114,10 +110,11 @@ The GitHub Actions workflow runs Python syntax checks and mission-planner unit t
 
 ## Implementation status and limitations
 
-- The repository includes ground-station Python modules and ROS 2 packages, including an installable bringup launch package, but **the presence of source files does not mean the complete stack has been verified from a clean installation**.
-- Full 3D SLAM, thermal-camera integration, and multi-UAV coordination remain future work.
-- The Raspberry Pi's compute capacity and the prototype's approximately 18-minute endurance constrained operation.
-- Detection metrics and flight-test claims should be interpreted in the context of the original project report; a reproducible benchmark suite is not included here.
+- The repository includes ground-station Python modules and ROS 2 packages, but **the complete stack has not been verified from a clean installation against flight hardware**.
+- Full 3D SLAM, validated GNSS-denied autonomy, thermal-camera integration, and multi-UAV coordination are not demonstrated here.
+- The detection pipeline expects external model files; no trained model weights or reproducible accuracy benchmark are committed.
+- The report's endurance value is a calculation, and some measurement figures are reported examples or test tolerances rather than independently reproduced benchmarks.
+- The separate technical summary uses broader language about onboard inference, 3D LiDAR/SLAM, and GPS-denied operation. This README deliberately limits claims to what can be substantiated from the final report and the repository; those broader capabilities should not be assumed to have been fully implemented or validated.
 - **Security:** the ground station exposes mission-control routes and should only be run in a trusted, isolated test network until authentication, restrictive CORS settings, safe secret management, and SSH host-key verification have been configured. Do not expose it directly to the public internet.
 
 ## Development checks
@@ -131,7 +128,7 @@ The GitHub Actions workflow runs Python syntax checks and mission-planner unit t
 ## Documentation
 
 - [Final-year project report (PDF)](Autonomous%20UAV%20system%20final%20PDF.pdf)
-- [UAV technical summary (DOCX)](Wadih%20Dahrouge%20UAV%20Technical%20Summary%20v2.docx)
+- [UAV technical summary (DOCX; read alongside the scope notes above)](Wadih%20Dahrouge%20UAV%20Technical%20Summary%20v2.docx)
 - [Browse the ground-station source](ground_station/server/)
 - [Browse the UAV-side code](drone/)
 

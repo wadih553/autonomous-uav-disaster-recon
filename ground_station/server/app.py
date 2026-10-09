@@ -44,7 +44,7 @@ ROSBRIDGE_WS_URL = os.environ.get(
 )
 ORS_API_KEY = os.environ.get('ORS_API_KEY', '')
 MISSION_STORAGE_PATH = os.path.abspath(os.environ.get('UAV_MISSION_STORAGE', './missions'))
-MISSION_ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{1,100}os.makedirs(MISSION_STORAGE_PATH, exist_ok=True)
+MISSION_ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{1,100}$')
 
 # --------------------------------------------------------------------- #
 # App init

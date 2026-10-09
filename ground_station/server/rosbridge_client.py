@@ -88,12 +88,15 @@ class RosbridgeClient:
                 except Exception as e:
                     print(f'[rosbridge_client] callback error on {topic}: {e}')
 
-    def _send(self, payload: dict):
-        if self._ws is not None and self._connected:
-            try:
-                self._ws.send(json.dumps(payload))
-            except Exception as e:
-                print(f'[rosbridge_client] send error: {e}')
+    def _send(self, payload: dict) -> bool:
+        if self._ws is None or not self._connected:
+            return False
+        try:
+            self._ws.send(json.dumps(payload))
+            return True
+        except Exception as e:
+            print(f'[rosbridge_client] send error: {e}')
+            return False
 
     # ------------------------------------------------------------------ #
     # Public API
@@ -109,17 +112,15 @@ class RosbridgeClient:
             self._subscriptions.pop(topic, None)
         self._send({'op': 'unsubscribe', 'topic': topic})
 
-    def publish(self, topic: str, msg_type: str, msg: dict):
-        self._send({
+    def publish(self, topic: str, msg_type: str, msg: dict) -> bool:
+        return self._send({
             'op': 'publish', 'topic': topic, 'type': msg_type, 'msg': msg,
         })
 
-    def call_service(self, service: str, srv_type: str, args: dict, timeout=5.0):
+    def call_service(self, service: str, srv_type: str, args: dict, timeout=5.0) -> bool:
+        """Send a service request. True means sent over the socket, not accepted by ROS."""
         request_id = str(uuid.uuid4())
-        self._send({
+        return self._send({
             'op': 'call_service', 'service': service, 'type': srv_type,
             'args': args, 'id': request_id,
         })
-        # Fire-and-forget for simplicity: mission-critical calls (RTL/LAND)
-        # are also mirrored through direct MAVROS REST-like set_mode calls
-        # so UI feedback does not depend on a service response round-trip.

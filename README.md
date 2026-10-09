@@ -99,7 +99,8 @@ The GitHub Actions workflow runs Python syntax checks and mission-planner unit t
 
 ```text
 .
-├── drone/                  # ROS 2 package scaffolding and UAV-side components
+├── drone/                  # ROS 2 packages and UAV-side components
+│   ├── uav_bringup/          # Installable bringup launch package
 ├── ground_station/
 │   ├── server/              # Flask API, mission planning, ROSBridge and detection modules
 │   └── ui/                  # Web interface assets and templates
@@ -113,7 +114,7 @@ The GitHub Actions workflow runs Python syntax checks and mission-planner unit t
 
 ## Implementation status and limitations
 
-- The repository includes ground-station Python modules and ROS 2 package scaffolding, but **the presence of source files does not mean the complete stack has been verified from a clean installation**.
+- The repository includes ground-station Python modules and ROS 2 packages, including an installable bringup launch package, but **the presence of source files does not mean the complete stack has been verified from a clean installation**.
 - Full 3D SLAM, thermal-camera integration, and multi-UAV coordination remain future work.
 - The Raspberry Pi's compute capacity and the prototype's approximately 18-minute endurance constrained operation.
 - Detection metrics and flight-test claims should be interpreted in the context of the original project report; a reproducible benchmark suite is not included here.

@@ -28,6 +28,8 @@ route-planning logic, see ground_station/server/mission_planner.py):
 import glob
 import json
 import os
+import re
+import math
 from datetime import datetime
 
 import rclpy
@@ -38,7 +40,8 @@ from std_srvs.srv import Trigger
 MISSION_STORAGE_DIR = os.environ.get('UAV_MISSION_DIR', '/home/pi/missions')
 REQUIRED_TOP_LEVEL_KEYS = {'mission_id', 'waypoints'}
 REQUIRED_WAYPOINT_KEYS = {'seq', 'lat', 'lon', 'alt'}
-
+MISSION_ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{1,100}$')
+MAX_WAYPOINTS = 500
 # BUGFIX: ground_station/server/ssh_uploader.py's SSH fallback path SCPs the
 # mission file to MISSION_STORAGE_DIR and then calls a ROS2 service to
 # trigger execution -- but that service never existed anywhere in the
@@ -80,17 +83,41 @@ class MissionReceiverNode(Node):
         )
 
     def _validate(self, mission: dict) -> (bool, str):
+        if not isinstance(mission, dict):
+            return False, 'Mission must be a JSON object'
         missing = REQUIRED_TOP_LEVEL_KEYS - mission.keys()
         if missing:
-            return False, f'Missing top-level keys: {missing}'
-        if not isinstance(mission['waypoints'], list) or not mission['waypoints']:
+            return False, f'Missing top-level keys: {sorted(missing)}'
+        mission_id = mission.get('mission_id')
+        if not isinstance(mission_id, str) or not MISSION_ID_PATTERN.fullmatch(mission_id):
+            return False, 'mission_id must contain only letters, digits, underscores, and hyphens (max 100 chars)'
+        waypoints = mission.get('waypoints')
+        if not isinstance(waypoints, list) or not waypoints:
             return False, 'waypoints must be a non-empty list'
-        for i, wp in enumerate(mission['waypoints']):
+        if len(waypoints) > MAX_WAYPOINTS:
+            return False, f'waypoints cannot exceed {MAX_WAYPOINTS} entries'
+        for i, wp in enumerate(waypoints):
+            if not isinstance(wp, dict):
+                return False, f'Waypoint {i} must be an object'
             missing_wp = REQUIRED_WAYPOINT_KEYS - wp.keys()
             if missing_wp:
-                return False, f'Waypoint {i} missing keys: {missing_wp}'
-            if not (-90 <= wp['lat'] <= 90) or not (-180 <= wp['lon'] <= 180):
-                return False, f'Waypoint {i} has out-of-range lat/lon'
+                return False, f'Waypoint {i} missing keys: {sorted(missing_wp)}'
+            seq = wp['seq']
+            if isinstance(seq, bool) or not isinstance(seq, int) or seq < 0:
+                return False, f'Waypoint {i} seq must be a non-negative integer'
+            for key in ('lat', 'lon', 'alt'):
+                value = wp[key]
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                    return False, f'Waypoint {i} {key} must be a finite number'
+            if not -90 <= wp['lat'] <= 90 or not -180 <= wp['lon'] <= 180:
+                return False, f'Waypoint {i} has out-of-range latitude/longitude'
+            if wp['alt'] < 0:
+                return False, f'Waypoint {i} altitude must be non-negative'
+            if 'yaw' in wp and (
+                isinstance(wp['yaw'], bool) or not isinstance(wp['yaw'], (int, float))
+                or not math.isfinite(wp['yaw'])
+            ):
+                return False, f'Waypoint {i} yaw must be a finite number'
         return True, 'ok'
 
     def _on_mission_received(self, msg: String):
@@ -107,7 +134,7 @@ class MissionReceiverNode(Node):
             self._publish_status('rejected', reason)
             return
 
-        mission_id = mission.get('mission_id', datetime.utcnow().strftime('%Y%m%dT%H%M%S'))
+        mission_id = mission['mission_id']
         path = os.path.join(MISSION_STORAGE_DIR, f'{mission_id}.json')
         with open(path, 'w') as f:
             json.dump(mission, f, indent=2)

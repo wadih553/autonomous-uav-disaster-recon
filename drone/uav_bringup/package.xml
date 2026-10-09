@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>uav_bringup</name>
+  <version>1.0.0</version>
+  <description>Launch files for the autonomous UAV disaster-reconnaissance stack.</description>
+  <maintainer email="wadihdahrouge1@gmail.com">Wadih Dahrouge</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>mavros</exec_depend>
+  <exec_depend>ydlidar_ros2_driver</exec_depend>
+  <exec_depend>drone_pkg</exec_depend>
+  <exec_depend>navigator_pkg</exec_depend>
+  <exec_depend>obstacle_avoidance</exec_depend>
+  <exec_depend>rosbridge_server</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

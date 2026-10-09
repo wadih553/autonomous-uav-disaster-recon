@@ -22,6 +22,7 @@ import json
 import os
 import time
 import threading
+import re
 from datetime import datetime
 
 from flask import Flask, render_template, jsonify, request
@@ -42,16 +43,20 @@ ROSBRIDGE_WS_URL = os.environ.get(
     'UAV_ROSBRIDGE_URL', f'ws://{RASPBERRY_PI_HOST}:9090'
 )
 ORS_API_KEY = os.environ.get('ORS_API_KEY', '')
-MISSION_STORAGE_PATH = os.environ.get('UAV_MISSION_STORAGE', './missions')
-
+MISSION_STORAGE_PATH = os.path.abspath(os.environ.get('UAV_MISSION_STORAGE', './missions'))
+MISSION_ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{1,100}$')
 os.makedirs(MISSION_STORAGE_PATH, exist_ok=True)
-
 # --------------------------------------------------------------------- #
 # App init
 # --------------------------------------------------------------------- #
 app = Flask(__name__, static_folder='../ui/static', template_folder='../ui/templates')
-app.config['SECRET_KEY'] = os.environ.get('UAV_SECRET_KEY', 'change-me-in-production')
-socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
+app.config['SECRET_KEY'] = os.environ.get('UAV_SECRET_KEY') or os.urandom(32).hex()
+if not os.environ.get('UAV_SECRET_KEY'):
+    app.logger.warning('UAV_SECRET_KEY is unset; using a temporary process-local secret.')
+allowed_origins = [origin.strip() for origin in os.environ.get(
+    'UAV_CORS_ALLOWED_ORIGINS', 'http://127.0.0.1:5000,http://localhost:5000'
+).split(',') if origin.strip()]
+socketio = SocketIO(app, cors_allowed_origins=allowed_origins, async_mode='threading')
 
 mission_planner = MissionPlanner(ors_api_key=ORS_API_KEY)
 ssh_uploader = SSHMissionUploader(
@@ -160,11 +165,13 @@ def api_status():
 def api_generate_mission():
     """Builds a mission JSON (scan pattern or manual waypoints) from
     operator-supplied parameters, as described in Ch. 4.3.1."""
-    params = request.get_json(force=True)
+    params = request.get_json(silent=True)
+    if not isinstance(params, dict):
+        return jsonify({'error': 'Request body must be a JSON object'}), 400
     required = {'center_lat', 'center_lon', 'scan_radius_m', 'cruise_altitude_m', 'scan_altitude_m'}
     missing = required - params.keys()
     if missing:
-        return jsonify({'error': f'Missing parameters: {missing}'}), 400
+        return jsonify({'error': f'Missing parameters: {sorted(missing)}'}), 400
 
     try:
         mission = mission_planner.build_scan_mission(
@@ -175,8 +182,8 @@ def api_generate_mission():
             scan_altitude_m=params['scan_altitude_m'],
             num_points=params.get('num_points', 12),
         )
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except (TypeError, ValueError) as e:
+        return jsonify({'error': str(e)}), 400
 
     mission_id = mission['mission_id']
     with open(os.path.join(MISSION_STORAGE_PATH, f'{mission_id}.json'), 'w') as f:
@@ -188,13 +195,16 @@ def api_generate_mission():
 @app.route('/api/mission/upload_custom', methods=['POST'])
 def api_upload_custom_mission():
     """Accepts a user-supplied mission JSON file, validates it, and stores it."""
-    mission = request.get_json(force=True)
+    mission = request.get_json(silent=True)
+    if not isinstance(mission, dict):
+        return jsonify({'error': 'Request body must be a JSON object'}), 400
     ok, reason = mission_planner.validate(mission)
     if not ok:
         return jsonify({'error': reason}), 400
 
-    mission_id = mission.get('mission_id') or datetime.utcnow().strftime('%Y%m%dT%H%M%S')
-    mission['mission_id'] = mission_id
+    mission_id = mission['mission_id']
+    if not MISSION_ID_PATTERN.fullmatch(mission_id):
+        return jsonify({'error': 'mission_id may contain only letters, digits, underscores, and hyphens'}), 400
     with open(os.path.join(MISSION_STORAGE_PATH, f'{mission_id}.json'), 'w') as f:
         json.dump(mission, f, indent=2)
     return jsonify(mission)
@@ -205,11 +215,16 @@ def api_launch_mission():
     """Pushes the mission to the UAV. Tries ROSBridge first (fast path);
     falls back to SCP + remote service trigger over SSH if ROSBridge is
     unavailable (Ch. 4.3.1)."""
-    mission_id = request.get_json(force=True).get('mission_id')
-    if not mission_id:
-        return jsonify({'error': 'mission_id is required'}), 400
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({'error': 'Request body must be a JSON object'}), 400
+    mission_id = payload.get('mission_id')
+    if not isinstance(mission_id, str) or not MISSION_ID_PATTERN.fullmatch(mission_id):
+        return jsonify({'error': 'A valid mission_id is required'}), 400
 
-    path = os.path.join(MISSION_STORAGE_PATH, f'{mission_id}.json')
+    path = os.path.abspath(os.path.join(MISSION_STORAGE_PATH, f'{mission_id}.json'))
+    if os.path.commonpath([MISSION_STORAGE_PATH, path]) != MISSION_STORAGE_PATH:
+        return jsonify({'error': 'Invalid mission path'}), 400
     if not os.path.exists(path):
         return jsonify({'error': f'Mission {mission_id} not found'}), 404
 
@@ -217,8 +232,10 @@ def api_launch_mission():
         mission_data = f.read()
 
     if rosbridge.is_connected():
-        rosbridge.publish('ground_station/mission/upload', 'std_msgs/String', {'data': mission_data})
-        return jsonify({'status': 'sent_via_rosbridge'})
+        sent = rosbridge.publish('ground_station/mission/upload', 'std_msgs/String', {'data': mission_data})
+        if not sent:
+            return jsonify({'error': 'ROSBridge connection exists but the mission payload could not be sent'}), 502
+        return jsonify({'status': 'sent_via_rosbridge', 'note': 'Sent to ROSBridge; verify mission status and vehicle state before proceeding.'})
 
     try:
         ssh_uploader.upload_mission(path)
@@ -230,26 +247,37 @@ def api_launch_mission():
 
 @app.route('/api/mission/rtl', methods=['POST'])
 def api_return_to_launch():
-    rosbridge.call_service('mavros/set_mode', 'mavros_msgs/SetMode', {'custom_mode': 'RTL'})
-    return jsonify({'status': 'rtl_commanded'})
+    if not rosbridge.is_connected():
+        return jsonify({'error': 'ROSBridge is disconnected; RTL request was not sent'}), 503
+    sent = rosbridge.call_service('mavros/set_mode', 'mavros_msgs/SetMode', {'custom_mode': 'RTL'})
+    if not sent:
+        return jsonify({'error': 'RTL request could not be sent'}), 502
+    return jsonify({'status': 'rtl_request_sent', 'note': 'This confirms only a request was sent, not that the aircraft changed mode.'})
 
 
 @app.route('/api/mission/land', methods=['POST'])
 def api_emergency_land():
-    rosbridge.call_service('mavros/set_mode', 'mavros_msgs/SetMode', {'custom_mode': 'LAND'})
-    return jsonify({'status': 'land_commanded'})
+    if not rosbridge.is_connected():
+        return jsonify({'error': 'ROSBridge is disconnected; LAND request was not sent'}), 503
+    sent = rosbridge.call_service('mavros/set_mode', 'mavros_msgs/SetMode', {'custom_mode': 'LAND'})
+    if not sent:
+        return jsonify({'error': 'LAND request could not be sent'}), 502
+    return jsonify({'status': 'land_request_sent', 'note': 'This confirms only a request was sent, not that the aircraft changed mode.'})
 
 
 @app.route('/api/mission/elevation_profile')
 def api_elevation_profile():
-    lat = float(request.args.get('lat'))
-    lon = float(request.args.get('lon'))
-    radius = float(request.args.get('radius_m', 100))
     try:
+        lat = float(request.args.get('lat', ''))
+        lon = float(request.args.get('lon', ''))
+        radius = float(request.args.get('radius_m', 100))
         profile = mission_planner.get_elevation_profile(lat, lon, radius)
         return jsonify(profile)
+    except (TypeError, ValueError) as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.exception('Elevation profile request failed')
+        return jsonify({'error': str(e)}), 502
 
 
 # --------------------------------------------------------------------- #
@@ -276,7 +304,10 @@ def main():
     rosbridge_thread = threading.Thread(target=rosbridge.run_forever, daemon=True)
     rosbridge_thread.start()
 
-    socketio.run(app, host='0.0.0.0', port=int(os.environ.get('UAV_GCS_PORT', 5000)))
+    # Localhost is the safe default. Set UAV_GCS_HOST=0.0.0.0 only when
+    # intentionally exposing the UI on a trusted, firewalled network.
+    socketio.run(app, host=os.environ.get('UAV_GCS_HOST', '127.0.0.1'),
+                 port=int(os.environ.get('UAV_GCS_PORT', 5000)))
 
 
 if __name__ == '__main__':

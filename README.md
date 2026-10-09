@@ -152,6 +152,8 @@ GitHub Actions runs Python syntax checks and mission-planner unit tests. It does
 
 ## Documentation
 
+- [ROS 2 setup and reproducibility guide](ROS2_SETUP.md) — workspace build steps, launch argument inspection, hardware precautions, and current verification limits.
+
 - [Final-year project report (PDF)](Autonomous%20UAV%20system%20final%20PDF.pdf)
 - [UAV technical summary (DOCX; read alongside the scope notes above)](Wadih%20Dahrouge%20UAV%20Technical%20Summary%20v2.docx)
 - [Browse the ground-station source](ground_station/server/)

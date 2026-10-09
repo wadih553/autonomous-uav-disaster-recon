@@ -1,5 +1,10 @@
 # Autonomous UAV System for Rapid Disaster Reconnaissance
 
+[![Python checks](https://github.com/wadih553/autonomous-uav-disaster-recon/actions/workflows/python-checks.yml/badge.svg?branch=main)](https://github.com/wadih553/autonomous-uav-disaster-recon/actions/workflows/python-checks.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![ROS 2](https://img.shields.io/badge/ROS%202-Python%20packages-22314E)
+
+
 **Final-year project · La Sagesse University · 2025 · Grade: A+**  
 **Technical lead:** Wadih Dahrouge · **Team:** Amine Batrouni, Houssam Hamdan  
 **Supervisor:** Dr. Eng. Roy Abi Zeid Daou
@@ -33,6 +38,26 @@ The final-year report gives the following project figures. They should be read w
 
 ## System architecture
 
+The following dataflow is based on the topics used by the current source code. It is a software-level view, not proof that every node has been launched together or validated on hardware.
+
+```mermaid
+flowchart LR
+    L[2D LiDAR driver] -->|scan| OA[obstacle_avoidance_node]
+    OA -->|drone/obstacle_avoidance/active| NAV[navigator_node]
+    OA -->|mavros/setpoint_velocity/cmd_vel| FC[Pixhawk via MAVROS]
+    GS[Flask ground station] -->|ground_station/mission/upload| MR[mission_receiver_node]
+    MR -->|drone/mission/active| NAV
+    NAV -->|mavros mission and mode services| FC
+    FC -->|state, GPS, mission progress| NAV
+    CAM[camera_node] -->|drone/camera/image_raw/compressed| GS
+    ENV[env_sensor_node] -->|drone/env/summary| GS
+    MR -->|drone/mission/status| GS
+    NAV -->|drone/mission/status| GS
+    GS <-->|WebSocket / ROSBridge| RB[rosbridge_server]
+    RB <--> FC
+```
+
+
 <p align="center">
   <img src="architecture_block_diagram.png" width="650" alt="UAV system architecture block diagram">
 </p>
@@ -41,7 +66,7 @@ The final-year report gives the following project figures. They should be read w
 - **Companion computer and robotics middleware:** Raspberry Pi 4B and ROS/ROS 2 components, as reflected in the project materials and current code.
 - **Flight-control interface:** MAVLink/MAVROS.
 - **Obstacle sensing:** YDLIDAR X4 Pro 2D scanning LiDAR; a camera provides video.
-- **Perception:** The ground-station source contains an optional detection pipeline that expects model weights at runtime. Those weights are not included in this repository, so detection will not be available unless the appropriate models and dependencies are supplied.
+- **Perception:** Human detection can use a local Ultralytics YOLO model. Fire/smoke detection is disabled unless a compatible Ultralytics object-detection model is explicitly configured. The project's named CNN weights are not assumed to be compatible with YOLO. No trained weights are included.
 - **Ground station:** Flask, Flask-SocketIO, a web interface using Leaflet, and ROSBridge communication.
 - **Additional sensing described in the report:** GPS/compass, landing-distance sensing, MQ-135 air-quality sensor, and SHT3-X temperature/humidity sensor.
 
@@ -79,7 +104,7 @@ python -m pip install -r requirements.txt
 cp .env.example .env
 ```
 
-The sample environment file documents configuration; the app does not automatically load `.env`. Export variables in your shell or use a trusted environment manager. Set a unique `UAV_SECRET_KEY`, configure the Raspberry Pi and ORS key if needed, and review [SECURITY.md](SECURITY.md) before running.
+The sample environment file documents configuration; the app does not automatically load `.env`. Export variables in your shell or use a trusted environment manager. Set a unique `UAV_SECRET_KEY`, configure the Raspberry Pi and ORS key if needed, and review [SECURITY.md](SECURITY.md) before running. By default, the web server binds to `127.0.0.1`; it will not be reachable from other devices unless you deliberately change `UAV_GCS_HOST`.
 
 Run the current checks from the repository root:
 

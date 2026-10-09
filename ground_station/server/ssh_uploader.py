@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
-ssh_uploader.py
-------------------
-Backup mission-delivery path used when ROSBridge is unreachable: securely
-copies the mission JSON to the Raspberry Pi over SCP and remotely triggers
-the mission-start ROS2 service via SSH (Paramiko), as described in the
-FYP report Ch. 4.3.1.
+SSH fallback for delivering a mission file to the Raspberry Pi.
+
+The remote host must already be present in the user's SSH known_hosts file.
+Do not automatically trust unknown host keys on a mission-control channel.
 """
 
 import os
@@ -16,21 +14,21 @@ try:
 except ImportError:  # pragma: no cover
     paramiko = None
 
-REMOTE_MISSION_DIR = '/home/pi/missions'
-# BUGFIX: this used to target /navigator_node/start_mission, a service that
-# was never implemented anywhere (navigator_node only ever exposed a topic
-# subscription, not a service server). The real service now lives on
-# mission_receiver_node -- see drone_pkg/mission_receiver_node.py -- which
-# loads the just-SCP'd file and republishes it on drone/mission/active
-# exactly like the normal ROSBridge path, so navigator_node itself needed
-# no changes for this fallback to work.
+REMOTE_MISSION_DIR = "/home/pi/missions"
 REMOTE_START_SERVICE_CMD = (
-    "ros2 service call /mission_receiver_node/start_mission std_srvs/srv/Trigger '{}'"
+    "ros2 service call /mission_receiver_node/start_mission "
+    "std_srvs/srv/Trigger '{}'"
 )
 
 
 class SSHMissionUploader:
-    def __init__(self, host: str, user: str, key_path: str = '~/.ssh/id_rsa', port: int = 22):
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        key_path: str = "~/.ssh/id_rsa",
+        port: int = 22,
+    ):
         self.host = host
         self.user = user
         self.key_path = os.path.expanduser(key_path)
@@ -38,37 +36,55 @@ class SSHMissionUploader:
 
     def _connect(self):
         if paramiko is None:
-            raise RuntimeError('paramiko is not installed (pip install paramiko)')
+            raise RuntimeError("paramiko is not installed (pip install paramiko)")
+
         client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        # Load trusted host keys and reject unknown hosts. Provision the Pi's
+        # verified host key in ~/.ssh/known_hosts before using this fallback.
+        client.load_system_host_keys()
+        client.set_missing_host_key_policy(paramiko.RejectPolicy())
         client.connect(
-            hostname=self.host, port=self.port, username=self.user,
-            key_filename=self.key_path, timeout=8,
+            hostname=self.host,
+            port=self.port,
+            username=self.user,
+            key_filename=self.key_path,
+            timeout=8,
+            allow_agent=True,
+            look_for_keys=True,
         )
         return client
 
     def upload_mission(self, local_path: str) -> str:
+        if not os.path.isfile(local_path):
+            raise FileNotFoundError(f"Mission file not found: {local_path}")
+
         client = self._connect()
         try:
-            sftp = client.open_sftp()
-            try:
-                sftp.mkdir(REMOTE_MISSION_DIR)
-            except IOError:
-                pass  # already exists
-            remote_path = posixpath.join(REMOTE_MISSION_DIR, os.path.basename(local_path))
-            sftp.put(local_path, remote_path)
-            sftp.close()
-            return remote_path
+            with client.open_sftp() as sftp:
+                try:
+                    sftp.stat(REMOTE_MISSION_DIR)
+                except IOError:
+                    sftp.mkdir(REMOTE_MISSION_DIR)
+
+                remote_path = posixpath.join(
+                    REMOTE_MISSION_DIR, os.path.basename(local_path)
+                )
+                sftp.put(local_path, remote_path)
+                return remote_path
         finally:
             client.close()
 
     def trigger_mission_start(self):
         client = self._connect()
         try:
-            stdin, stdout, stderr = client.exec_command(REMOTE_START_SERVICE_CMD, timeout=10)
+            _stdin, stdout, stderr = client.exec_command(
+                REMOTE_START_SERVICE_CMD, timeout=10
+            )
             exit_status = stdout.channel.recv_exit_status()
             if exit_status != 0:
-                err = stderr.read().decode(errors='ignore')
-                raise RuntimeError(f'Remote mission-start command failed: {err}')
+                err = stderr.read().decode(errors="replace").strip()
+                raise RuntimeError(
+                    f"Remote mission-start command failed (exit {exit_status}): {err}"
+                )
         finally:
             client.close()

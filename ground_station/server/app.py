@@ -233,7 +233,9 @@ def api_launch_mission():
         mission_data = f.read()
 
     if rosbridge.is_connected():
-        rosbridge.publish('ground_station/mission/upload', 'std_msgs/String', {'data': mission_data})
+        sent = rosbridge.publish('ground_station/mission/upload', 'std_msgs/String', {'data': mission_data})
+        if not sent:
+            return jsonify({'error': 'ROSBridge connection exists but the mission payload could not be sent'}), 502
         return jsonify({'status': 'sent_via_rosbridge', 'note': 'Sent to ROSBridge; verify mission status and vehicle state before proceeding.'})
 
     try:
@@ -248,7 +250,9 @@ def api_launch_mission():
 def api_return_to_launch():
     if not rosbridge.is_connected():
         return jsonify({'error': 'ROSBridge is disconnected; RTL request was not sent'}), 503
-    rosbridge.call_service('mavros/set_mode', 'mavros_msgs/SetMode', {'custom_mode': 'RTL'})
+    sent = rosbridge.call_service('mavros/set_mode', 'mavros_msgs/SetMode', {'custom_mode': 'RTL'})
+    if not sent:
+        return jsonify({'error': 'RTL request could not be sent'}), 502
     return jsonify({'status': 'rtl_request_sent', 'note': 'This confirms only a request was sent, not that the aircraft changed mode.'})
 
 
@@ -256,7 +260,9 @@ def api_return_to_launch():
 def api_emergency_land():
     if not rosbridge.is_connected():
         return jsonify({'error': 'ROSBridge is disconnected; LAND request was not sent'}), 503
-    rosbridge.call_service('mavros/set_mode', 'mavros_msgs/SetMode', {'custom_mode': 'LAND'})
+    sent = rosbridge.call_service('mavros/set_mode', 'mavros_msgs/SetMode', {'custom_mode': 'LAND'})
+    if not sent:
+        return jsonify({'error': 'LAND request could not be sent'}), 502
     return jsonify({'status': 'land_request_sent', 'note': 'This confirms only a request was sent, not that the aircraft changed mode.'})
 
 

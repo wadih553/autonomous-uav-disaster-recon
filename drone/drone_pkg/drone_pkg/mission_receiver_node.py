@@ -40,7 +40,7 @@ from std_srvs.srv import Trigger
 MISSION_STORAGE_DIR = os.environ.get('UAV_MISSION_DIR', '/home/pi/missions')
 REQUIRED_TOP_LEVEL_KEYS = {'mission_id', 'waypoints'}
 REQUIRED_WAYPOINT_KEYS = {'seq', 'lat', 'lon', 'alt'}
-MISSION_ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{1,100}
+MISSION_ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{1,100}$')
 # BUGFIX: ground_station/server/ssh_uploader.py's SSH fallback path SCPs the
 # mission file to MISSION_STORAGE_DIR and then calls a ROS2 service to
 # trigger execution -- but that service never existed anywhere in the

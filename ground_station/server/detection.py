@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 """
-detection.py
---------------
-Runs the two AI models described in the FYP report (Ch. 4.3.1 and
-Ch. 5.3.2) on incoming video frames from the UAV:
+Optional ground-station video perception pipeline.
 
-  - Human detection: YOLOv8 (pretrained, filtered to the 'person' class)
-    -> 92% accuracy per the FYP's real-world test results.
-  - Fire/smoke detection: a custom-trained CNN classifier/detector
-    -> 80% accuracy per the FYP's real-world test results.
+The final-year report describes human and fire/smoke detection on the
+ground-station computer. This module expects model weights at runtime:
+  - models/yolov8n.pt for YOLO person detection (Ultralytics may also fetch
+    standard pretrained weights depending on the environment).
+  - models/fire_smoke_cnn.pt for the project's fire/smoke detector.
 
-Both models run on the ground station server (not the Raspberry Pi) --
-the Pi only streams video; this offloading keeps the companion computer
-responsive for flight-critical tasks (Ch. 4.3.1, "Machine Learning").
+The project-specific fire/smoke weights are not included in this repository.
+Consequently, this code alone does not demonstrate a working detector or
+reproduce any accuracy figure. The report's detection claims are not treated
+as independently benchmarked by this repository.
 """
 
 import base64
-import io
 
 import numpy as np
 
@@ -30,9 +28,9 @@ try:
 except ImportError:  # pragma: no cover
     YOLO = None
 
-HUMAN_MODEL_WEIGHTS = 'models/yolov8n.pt'          # pretrained, class-filtered to 'person'
-FIRE_MODEL_WEIGHTS = 'models/fire_smoke_cnn.pt'    # custom-trained on the project's fire dataset
-PERSON_CLASS_ID = 0                                 # COCO class index for 'person'
+HUMAN_MODEL_WEIGHTS = 'models/yolov8n.pt'
+FIRE_MODEL_WEIGHTS = 'models/fire_smoke_cnn.pt'
+PERSON_CLASS_ID = 0
 CONFIDENCE_THRESHOLD = 0.45
 
 
@@ -45,7 +43,7 @@ class DetectionPipeline:
 
     def _load_models(self):
         if YOLO is None:
-            print('[detection] ultralytics not installed - human detection disabled')
+            print('[detection] ultralytics not installed - detection disabled')
             return
         try:
             self.human_model = YOLO(HUMAN_MODEL_WEIGHTS)
@@ -62,9 +60,7 @@ class DetectionPipeline:
             self.display_mode = mode
 
     def process_frame_b64(self, frame_b64: str) -> dict:
-        """Decodes a base64 JPEG frame, runs both models, and returns
-        bounding boxes in normalized [x, y, w, h, confidence] form so the
-        frontend can draw overlays without needing OpenCV."""
+        """Decode a base64 JPEG frame and return normalized detection boxes."""
         if cv2 is None:
             return {'human_boxes': [], 'fire_boxes': []}
 

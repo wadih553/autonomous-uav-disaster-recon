@@ -75,7 +75,9 @@ The descriptions and images document project work; they are not substitutes for 
 
 | File | Description |
 |---|---|
-| [Autonomous UAV system final PDF.pdf](Autonomous%20UAV%20system%20final%20PDF.pdf) | Full final-year project report, including background, system design, and testing |
+| [PhD CV (PDF)](Wadih%20Dahrouge%20CV%20PhD.pdf) | CV for robotics and PhD applications |
+| [UAV technical summary (PDF)](Wadih_Dahrouge_UAV_Technical_Summary_v2%20pdf.pdf) | Concise technical overview of the project |
+| [Full final-year project report](Autonomous%20UAV%20system%20final%20PDF.pdf) | Detailed report covering background, system design, and testing |
 | [System architecture](architecture_block_diagram.png) | System block diagram |
 | [Wiring schematic](wiring_schematic.png) | Hardware wiring schematic |
 | [Detection output](detection_results.png) | Fire/smoke and human-detection example |

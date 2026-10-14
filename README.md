@@ -18,19 +18,16 @@ Wildfires and other emergencies can put responders at risk and make rapid situat
 
 The project was self-funded and developed in Lebanon during regional conflict in 2024–2025, when GNSS/network disruptions and restricted opportunities for outdoor testing affected validation. Testing therefore combined bench checks, simulation, and constrained real-world flight windows.
 
-## Results reported by the project
+## Project status and test notes
 
-| Metric | Reported result |
-|---|---:|
-| Human detection accuracy (YOLOv8) | **92%** |
-| Fire detection accuracy | **80%** |
-| Flight endurance | **18 minutes** |
-| Assembled weight | **1.4 kg** |
-| GPS positioning accuracy in field testing | **±2–3 m** |
-| LiDAR obstacle-distance tolerance described in project testing | **±2 cm** |
-| Environmental sensor figures | Humidity ±0.5% · Temperature ±2–3% · Air quality ±4.5 AQI |
-
-These are project-reported figures; the repository does not include a complete benchmark dataset and protocol to independently reproduce every value. In particular, the ±2 cm figure should be read as the reported obstacle-distance tolerance, not as an independently verified 360-degree accuracy benchmark.
+| Item | Status |
+|---|---|
+| Human / fire detection (YOLOv8) | Prototype running on the Raspberry Pi companion computer. Project-reported figures (92% human, 80% fire) come from the team's own tests; no public dataset or test protocol is included, so they are not independently reproducible. |
+| Flight endurance | About 18 min at 1.4 kg assembled weight (estimate from the project report) |
+| GPS positioning in field testing | ±2–3 m |
+| LiDAR obstacle distance | ±2 cm is the tolerance used in project testing (simulation and open-field flights), not a verified 360° accuracy benchmark |
+| Environmental sensors | Humidity ±0.5% · Temperature ±2–3% · Air quality ±4.5 AQI (sensor-level figures) |
+| Thermal camera / full 3D mapping | Not completed in this iteration |
 
 ## System architecture
 
